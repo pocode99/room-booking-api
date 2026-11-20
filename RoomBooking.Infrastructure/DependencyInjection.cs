@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using RoomBooking.Application.Auth;
+using RoomBooking.Application.Bookings;
 using RoomBooking.Application.Rooms;
 using RoomBooking.Infrastructure.Authentication;
 using RoomBooking.Infrastructure.Persistence;
@@ -18,6 +19,7 @@ public static class DependencyInjection
 
         services.AddScoped<IRoomRepository, RoomRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IBookingRepository, BookingRepository>();
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddSingleton<ITokenService, TokenService>();
 
