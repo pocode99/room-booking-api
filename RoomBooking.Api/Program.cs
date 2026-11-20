@@ -1,25 +1,66 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using RoomBooking.Api.Middleware;
 using RoomBooking.Application;
-using Microsoft.EntityFrameworkCore;
-using RoomBooking.Infrastructure.Persistence;
 using RoomBooking.Infrastructure;
+using RoomBooking.Infrastructure.Authentication;
+using RoomBooking.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
+
 var connectionString = builder.Configuration.GetConnectionString("Default")
     ?? throw new InvalidOperationException("Connection string 'Default' not found.");
 
 builder.Services.AddInfrastructure(connectionString);
 builder.Services.AddApplication();
 
-// Add services to the container.
+// Bind JWT settings and fail fast when the signing key is missing or too short.
+builder.Services.Configure<JwtOptions>(
+    builder.Configuration.GetSection(JwtOptions.SectionName));
+
+var jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
+    ?? new JwtOptions();
+
+if (string.IsNullOrWhiteSpace(jwt.Key) || Encoding.UTF8.GetByteCount(jwt.Key) < 32)
+{
+    throw new InvalidOperationException(
+        "Jwt:Key is missing or shorter than 32 bytes. " +
+        "Set it with user secrets or the Jwt__Key environment variable.");
+}
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        // Keep short claim names such as "sub" and "role" instead of remapping them.
+        options.MapInboundClaims = false;
+
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwt.Issuer,
+            ValidateAudience = true,
+            ValidAudience = jwt.Audience,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.Key)),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromMinutes(1),
+            NameClaimType = "name",
+            RoleClaimType = "role"
+        };
+    });
+
+builder.Services.AddAuthorization();
 
 builder.Services.AddControllers();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -27,7 +68,6 @@ using (var scope = app.Services.CreateScope())
     DbSeeder.Seed(db);       // add sample rooms if the Rooms table is empty
 }
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -43,6 +83,8 @@ app.UseExceptionHandler();
 
 app.UseHttpsRedirection();
 
+// Authentication must run before authorization.
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

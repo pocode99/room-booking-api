@@ -1,0 +1,49 @@
+@baseUrl = http://localhost:5016
+
+### Register a user (expect 201)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "alice@example.com",
+  "password": "Passw0rd!123",
+  "fullName": "Alice Nguyen"
+}
+
+### Register the same email with different casing (expect 409)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "ALICE@example.com",
+  "password": "Passw0rd!123",
+  "fullName": "Alice Again"
+}
+
+### Login with correct credentials (expect 200 and an accessToken)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "alice@example.com",
+  "password": "Passw0rd!123"
+}
+
+### Login with a wrong password (expect 401)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "alice@example.com",
+  "password": "wrong-password"
+}
+
+### Register with invalid data (expect 400)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "not-an-email",
+  "password": "short",
+  "fullName": ""
+}

@@ -19,6 +19,7 @@ public static class DependencyInjection
         services.AddScoped<IRoomRepository, RoomRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
+        services.AddSingleton<ITokenService, TokenService>();
 
         return services;
     }
