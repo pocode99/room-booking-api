@@ -7,6 +7,7 @@ using RoomBooking.Application;
 using RoomBooking.Infrastructure;
 using RoomBooking.Infrastructure.Authentication;
 using RoomBooking.Infrastructure.Persistence;
+using RoomBooking.Application.Auth;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -66,6 +67,24 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();   // create the .db file and tables if they do not exist
     DbSeeder.Seed(db);       // add sample rooms if the Rooms table is empty
+
+    var adminEmail = builder.Configuration["Seed:AdminEmail"];
+    var adminPassword = builder.Configuration["Seed:AdminPassword"];
+
+    if (!string.IsNullOrWhiteSpace(adminEmail) && !string.IsNullOrWhiteSpace(adminPassword))
+    {
+        DbSeeder.SeedAdmin(
+            db,
+            scope.ServiceProvider.GetRequiredService<IPasswordHasher>(),
+            scope.ServiceProvider.GetRequiredService<TimeProvider>(),
+            adminEmail,
+            adminPassword);
+    }
+    else
+    {
+        app.Logger.LogWarning(
+            "Seed:AdminEmail and Seed:AdminPassword are not set. No admin account was created.");
+    }
 }
 
 if (app.Environment.IsDevelopment())

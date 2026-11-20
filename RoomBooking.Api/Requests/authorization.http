@@ -38,3 +38,14 @@ Authorization: Bearer {{login.response.body.accessToken}}
 ### Delete a room as a regular user (expect 403)
 DELETE {{baseUrl}}/api/rooms/1
 Authorization: Bearer {{login.response.body.accessToken}}
+
+### Register while trying to set the role to Admin (expect 201 and role "User")
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "bob@example.com",
+  "password": "Passw0rd!123",
+  "fullName": "Bob Tran",
+  "role": "Admin"
+}

@@ -1,17 +1,32 @@
 @baseUrl = http://localhost:5016
 
+### Log in as admin (expect 200)
+# @name adminLogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "{{$dotenv ADMIN_PASSWORD}}"
+}
+
 ### List all rooms (expect 200)
 GET {{baseUrl}}/api/rooms
+Authorization: Bearer {{adminLogin.response.body.accessToken}}
 
 ### Get one room (expect 200)
 GET {{baseUrl}}/api/rooms/1
+Authorization: Bearer {{adminLogin.response.body.accessToken}}
 
 ### Get a room that does not exist (expect 404)
 GET {{baseUrl}}/api/rooms/999
+Authorization: Bearer {{adminLogin.response.body.accessToken}}
 
 ### Create a room (expect 201 and a Location header)
+# @name createRoom
 POST {{baseUrl}}/api/rooms
 Content-Type: application/json
+Authorization: Bearer {{adminLogin.response.body.accessToken}}
 
 {
   "name": "Pegasus",
@@ -21,6 +36,7 @@ Content-Type: application/json
 ### Create a room with a duplicate name, different casing (expect 409)
 POST {{baseUrl}}/api/rooms
 Content-Type: application/json
+Authorization: Bearer {{adminLogin.response.body.accessToken}}
 
 {
   "name": "orion",
@@ -30,32 +46,41 @@ Content-Type: application/json
 ### Create a room with invalid data (expect 400)
 POST {{baseUrl}}/api/rooms
 Content-Type: application/json
+Authorization: Bearer {{adminLogin.response.body.accessToken}}
 
 {
   "name": "",
   "capacity": 0
 }
 
-### Update a room (expect 200). Use the id returned by the create request above.
-PUT {{baseUrl}}/api/rooms/5
+### Update the room created above (expect 200)
+PUT {{baseUrl}}/api/rooms/{{createRoom.response.body.id}}
 Content-Type: application/json
+Authorization: Bearer {{adminLogin.response.body.accessToken}}
 
 {
   "name": "Pegasus Prime",
   "capacity": 12
 }
 
-### Update a room using another room's name (expect 409)
-PUT {{baseUrl}}/api/rooms/5
+### Update the room using another room's name (expect 409)
+PUT {{baseUrl}}/api/rooms/{{createRoom.response.body.id}}
 Content-Type: application/json
+Authorization: Bearer {{adminLogin.response.body.accessToken}}
 
 {
   "name": "Vega",
   "capacity": 12
 }
 
-### Delete a room (expect 204)
-DELETE {{baseUrl}}/api/rooms/5
+### Delete the room created above (expect 204)
+DELETE {{baseUrl}}/api/rooms/{{createRoom.response.body.id}}
+Authorization: Bearer {{adminLogin.response.body.accessToken}}
+
+### Get the deleted room (expect 404)
+GET {{baseUrl}}/api/rooms/{{createRoom.response.body.id}}
+Authorization: Bearer {{adminLogin.response.body.accessToken}}
 
 ### Delete a room that does not exist (expect 404)
 DELETE {{baseUrl}}/api/rooms/999
+Authorization: Bearer {{adminLogin.response.body.accessToken}}
