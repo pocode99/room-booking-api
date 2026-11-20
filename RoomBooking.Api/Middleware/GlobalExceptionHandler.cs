@@ -21,6 +21,7 @@ public class GlobalExceptionHandler : IExceptionHandler
         {
             NotFoundException => (StatusCodes.Status404NotFound, "Resource not found"),
             ConflictException => (StatusCodes.Status409Conflict, "Conflict"),
+            InvalidCredentialsException => (StatusCodes.Status401Unauthorized, "Unauthorized"),
             // Database constraint failures, e.g. a unique index or a foreign key.
             DbUpdateException => (StatusCodes.Status409Conflict, "Conflict"),
             _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred")
@@ -34,7 +35,7 @@ public class GlobalExceptionHandler : IExceptionHandler
         // Never expose internal details of unexpected errors to the client.
         var detail = exception switch
         {
-            NotFoundException or ConflictException => exception.Message,
+            NotFoundException or ConflictException or InvalidCredentialsException => exception.Message,
             DbUpdateException => "The change conflicts with existing data.",
             _ => "An unexpected error occurred. Please try again later."
         };

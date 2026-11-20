@@ -1,8 +1,10 @@
-using RoomBooking.Application.Rooms;
-using RoomBooking.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using RoomBooking.Application.Auth;
+using RoomBooking.Application.Rooms;
+using RoomBooking.Infrastructure.Authentication;
 using RoomBooking.Infrastructure.Persistence;
+using RoomBooking.Infrastructure.Repositories;
 
 namespace RoomBooking.Infrastructure;
 
@@ -15,6 +17,8 @@ public static class DependencyInjection
             options.UseSqlite(connectionString));
 
         services.AddScoped<IRoomRepository, RoomRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddSingleton<IPasswordHasher, PasswordHasher>();
 
         return services;
     }
