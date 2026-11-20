@@ -1,0 +1,40 @@
+@baseUrl = http://localhost:5016
+
+### Call a protected endpoint without a token (expect 401)
+GET {{baseUrl}}/api/rooms
+
+### Call a protected endpoint with a garbage token (expect 401)
+GET {{baseUrl}}/api/rooms
+Authorization: Bearer not-a-real-token
+
+### Log in as a regular user (expect 200)
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "alice@example.com",
+  "password": "Passw0rd!123"
+}
+
+### List rooms as a regular user (expect 200)
+GET {{baseUrl}}/api/rooms
+Authorization: Bearer {{login.response.body.accessToken}}
+
+### Get one room as a regular user (expect 200)
+GET {{baseUrl}}/api/rooms/1
+Authorization: Bearer {{login.response.body.accessToken}}
+
+### Create a room as a regular user (expect 403)
+POST {{baseUrl}}/api/rooms
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.accessToken}}
+
+{
+  "name": "Forbidden Room",
+  "capacity": 5
+}
+
+### Delete a room as a regular user (expect 403)
+DELETE {{baseUrl}}/api/rooms/1
+Authorization: Bearer {{login.response.body.accessToken}}

@@ -1,10 +1,13 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RoomBooking.Application.Rooms;
+using RoomBooking.Domain.Enums;
 
 namespace RoomBooking.Api.Controllers;
 
 [ApiController]
 [Route("api/rooms")]
+[Authorize]   // every endpoint requires a valid token unless a stricter rule is set below
 public class RoomsController : ControllerBase
 {
     private readonly IRoomService _rooms;
@@ -23,6 +26,7 @@ public class RoomsController : ControllerBase
         => Ok(await _rooms.GetByIdAsync(id, ct));
 
     [HttpPost]
+    [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<ActionResult<RoomResponse>> Create(CreateRoomRequest request, CancellationToken ct)
     {
         var room = await _rooms.CreateAsync(request, ct);
@@ -32,10 +36,12 @@ public class RoomsController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<ActionResult<RoomResponse>> Update(int id, UpdateRoomRequest request, CancellationToken ct)
         => Ok(await _rooms.UpdateAsync(id, request, ct));
 
     [HttpDelete("{id:int}")]
+    [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
         await _rooms.DeleteAsync(id, ct);
