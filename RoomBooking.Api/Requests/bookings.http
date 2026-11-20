@@ -1,0 +1,240 @@
+@baseUrl = http://localhost:5016
+
+### Register bob (201 the first time, 409 if he already exists; both are fine)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "bob@example.com",
+  "password": "Passw0rd!123",
+  "fullName": "Bob Tran"
+}
+
+### 1. Log in as alice (expect 200)
+# @name aliceLogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "alice@example.com",
+  "password": "Passw0rd!123"
+}
+
+### 2. Log in as bob (expect 200)
+# @name bobLogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "bob@example.com",
+  "password": "Passw0rd!123"
+}
+
+### 3. Log in as admin (expect 200)
+# @name adminLogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "{{$dotenv ADMIN_PASSWORD}}"
+}
+
+### 4. Create a booking without a token (expect 401)
+POST {{baseUrl}}/api/bookings
+Content-Type: application/json
+
+{
+  "roomId": 1,
+  "title": "No token",
+  "start": "2027-03-01T09:00:00Z",
+  "end": "2027-03-01T11:00:00Z"
+}
+
+### 5. Alice books room 1, 09:00-11:00 (expect 201, status Active, roomName Orion)
+# @name aliceBooking
+POST {{baseUrl}}/api/bookings
+Content-Type: application/json
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+{
+  "roomId": 1,
+  "title": "Alice planning",
+  "start": "2027-03-01T09:00:00Z",
+  "end": "2027-03-01T11:00:00Z"
+}
+
+### 6. Get alice's booking (expect 200)
+GET {{baseUrl}}/api/bookings/{{aliceBooking.response.body.id}}
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+### 7. Bob overlaps the end of alice's booking, 10:00-12:00 (expect 409)
+POST {{baseUrl}}/api/bookings
+Content-Type: application/json
+Authorization: Bearer {{bobLogin.response.body.accessToken}}
+
+{
+  "roomId": 1,
+  "title": "Overlap at the end",
+  "start": "2027-03-01T10:00:00Z",
+  "end": "2027-03-01T12:00:00Z"
+}
+
+### 8. Bob books inside alice's booking, 09:30-10:30 (expect 409)
+POST {{baseUrl}}/api/bookings
+Content-Type: application/json
+Authorization: Bearer {{bobLogin.response.body.accessToken}}
+
+{
+  "roomId": 1,
+  "title": "Inside",
+  "start": "2027-03-01T09:30:00Z",
+  "end": "2027-03-01T10:30:00Z"
+}
+
+### 9. Bob's booking encloses alice's, 08:00-12:00 (expect 409)
+POST {{baseUrl}}/api/bookings
+Content-Type: application/json
+Authorization: Bearer {{bobLogin.response.body.accessToken}}
+
+{
+  "roomId": 1,
+  "title": "Enclosing",
+  "start": "2027-03-01T08:00:00Z",
+  "end": "2027-03-01T12:00:00Z"
+}
+
+### 10. Bob books back-to-back, 11:00-12:00 (expect 201, touching is not overlapping)
+# @name bobBooking
+POST {{baseUrl}}/api/bookings
+Content-Type: application/json
+Authorization: Bearer {{bobLogin.response.body.accessToken}}
+
+{
+  "roomId": 1,
+  "title": "Back to back",
+  "start": "2027-03-01T11:00:00Z",
+  "end": "2027-03-01T12:00:00Z"
+}
+
+### 11. Bob books a different room at the same time, room 2 (expect 201)
+# @name bobRoom2Booking
+POST {{baseUrl}}/api/bookings
+Content-Type: application/json
+Authorization: Bearer {{bobLogin.response.body.accessToken}}
+
+{
+  "roomId": 2,
+  "title": "Other room",
+  "start": "2027-03-01T09:00:00Z",
+  "end": "2027-03-01T11:00:00Z"
+}
+
+### 12. Start time after end time (expect 400)
+POST {{baseUrl}}/api/bookings
+Content-Type: application/json
+Authorization: Bearer {{bobLogin.response.body.accessToken}}
+
+{
+  "roomId": 3,
+  "title": "Backwards",
+  "start": "2027-03-02T11:00:00Z",
+  "end": "2027-03-02T09:00:00Z"
+}
+
+### 13. Booking in the past (expect 400)
+POST {{baseUrl}}/api/bookings
+Content-Type: application/json
+Authorization: Bearer {{bobLogin.response.body.accessToken}}
+
+{
+  "roomId": 3,
+  "title": "Past",
+  "start": "2020-01-01T09:00:00Z",
+  "end": "2020-01-01T11:00:00Z"
+}
+
+### 14. Longer than 4 hours, 5 hours in total (expect 400)
+POST {{baseUrl}}/api/bookings
+Content-Type: application/json
+Authorization: Bearer {{bobLogin.response.body.accessToken}}
+
+{
+  "roomId": 3,
+  "title": "Too long",
+  "start": "2027-03-02T09:00:00Z",
+  "end": "2027-03-02T14:00:00Z"
+}
+
+### 15. Room does not exist (expect 404)
+POST {{baseUrl}}/api/bookings
+Content-Type: application/json
+Authorization: Bearer {{bobLogin.response.body.accessToken}}
+
+{
+  "roomId": 999,
+  "title": "Ghost room",
+  "start": "2027-03-02T09:00:00Z",
+  "end": "2027-03-02T10:00:00Z"
+}
+
+### 16. Invalid data, empty title and roomId 0 (expect 400)
+POST {{baseUrl}}/api/bookings
+Content-Type: application/json
+Authorization: Bearer {{bobLogin.response.body.accessToken}}
+
+{
+  "roomId": 0,
+  "title": "",
+  "start": "2027-03-02T09:00:00Z",
+  "end": "2027-03-02T10:00:00Z"
+}
+
+### 17. Get a booking that does not exist (expect 404)
+GET {{baseUrl}}/api/bookings/999999
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+### 18. Bob tries to cancel alice's booking (expect 403)
+DELETE {{baseUrl}}/api/bookings/{{aliceBooking.response.body.id}}
+Authorization: Bearer {{bobLogin.response.body.accessToken}}
+
+### 19. Admin deletes room 1 while it has upcoming bookings (expect 409)
+DELETE {{baseUrl}}/api/rooms/1
+Authorization: Bearer {{adminLogin.response.body.accessToken}}
+
+### 20. Alice cancels her own booking (expect 204)
+DELETE {{baseUrl}}/api/bookings/{{aliceBooking.response.body.id}}
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+### 21. Get the cancelled booking (expect 200, status Cancelled)
+GET {{baseUrl}}/api/bookings/{{aliceBooking.response.body.id}}
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+### 22. Alice cancels it again (expect 204, cancelling twice is harmless)
+DELETE {{baseUrl}}/api/bookings/{{aliceBooking.response.body.id}}
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+### 23. Bob books alice's old slot, 09:00-11:00 (expect 201, cancelled bookings do not block)
+# @name bobRebook
+POST {{baseUrl}}/api/bookings
+Content-Type: application/json
+Authorization: Bearer {{bobLogin.response.body.accessToken}}
+
+{
+  "roomId": 1,
+  "title": "Reused slot",
+  "start": "2027-03-01T09:00:00Z",
+  "end": "2027-03-01T11:00:00Z"
+}
+
+### 24. Admin cancels bob's booking (expect 204, admins can cancel any booking)
+DELETE {{baseUrl}}/api/bookings/{{bobBooking.response.body.id}}
+Authorization: Bearer {{adminLogin.response.body.accessToken}}
+
+### 25. Cleanup: admin cancels bob's room 2 booking (expect 204)
+DELETE {{baseUrl}}/api/bookings/{{bobRoom2Booking.response.body.id}}
+Authorization: Bearer {{adminLogin.response.body.accessToken}}
+
+### 26. Cleanup: admin cancels bob's rebooked slot (expect 204)
+DELETE {{baseUrl}}/api/bookings/{{bobRebook.response.body.id}}
+Authorization: Bearer {{adminLogin.response.body.accessToken}}

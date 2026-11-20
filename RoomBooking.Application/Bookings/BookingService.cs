@@ -103,7 +103,7 @@ public class BookingService : IBookingService
             AsUtc(booking.CreatedAtUtc));
 
     // SQLite returns DateTime values with Kind = Unspecified. Marking them as UTC makes
-    // the API serialize them with a "Z" suffix instead of an ambiguous local time.
+    // the API serialize them with an explicit +00:00 offset instead of an ambiguous local time.
     private static DateTimeOffset AsUtc(DateTime value) =>
         new(DateTime.SpecifyKind(value, DateTimeKind.Utc));
 }
