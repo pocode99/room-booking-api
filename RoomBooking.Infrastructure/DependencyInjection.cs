@@ -1,3 +1,5 @@
+using RoomBooking.Application.Rooms;
+using RoomBooking.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using RoomBooking.Infrastructure.Persistence;
@@ -11,6 +13,8 @@ public static class DependencyInjection
     {
         services.AddDbContext<AppDbContext>(options =>
             options.UseSqlite(connectionString));
+
+        services.AddScoped<IRoomRepository, RoomRepository>();
 
         return services;
     }
