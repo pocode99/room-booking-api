@@ -1,3 +1,4 @@
+using RoomBooking.Application;
 using Microsoft.EntityFrameworkCore;
 using RoomBooking.Infrastructure.Persistence;
 using RoomBooking.Infrastructure;
@@ -7,6 +8,7 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
     ?? throw new InvalidOperationException("Connection string 'Default' not found.");
 
 builder.Services.AddInfrastructure(connectionString);
+builder.Services.AddApplication();
 
 // Add services to the container.
 
