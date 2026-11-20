@@ -1,0 +1,61 @@
+@baseUrl = http://localhost:5016
+
+### List all rooms (expect 200)
+GET {{baseUrl}}/api/rooms
+
+### Get one room (expect 200)
+GET {{baseUrl}}/api/rooms/1
+
+### Get a room that does not exist (expect 404)
+GET {{baseUrl}}/api/rooms/999
+
+### Create a room (expect 201 and a Location header)
+POST {{baseUrl}}/api/rooms
+Content-Type: application/json
+
+{
+  "name": "Pegasus",
+  "capacity": 10
+}
+
+### Create a room with a duplicate name, different casing (expect 409)
+POST {{baseUrl}}/api/rooms
+Content-Type: application/json
+
+{
+  "name": "orion",
+  "capacity": 6
+}
+
+### Create a room with invalid data (expect 400)
+POST {{baseUrl}}/api/rooms
+Content-Type: application/json
+
+{
+  "name": "",
+  "capacity": 0
+}
+
+### Update a room (expect 200). Use the id returned by the create request above.
+PUT {{baseUrl}}/api/rooms/5
+Content-Type: application/json
+
+{
+  "name": "Pegasus Prime",
+  "capacity": 12
+}
+
+### Update a room using another room's name (expect 409)
+PUT {{baseUrl}}/api/rooms/5
+Content-Type: application/json
+
+{
+  "name": "Vega",
+  "capacity": 12
+}
+
+### Delete a room (expect 204)
+DELETE {{baseUrl}}/api/rooms/5
+
+### Delete a room that does not exist (expect 404)
+DELETE {{baseUrl}}/api/rooms/999
