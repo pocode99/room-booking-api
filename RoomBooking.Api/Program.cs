@@ -8,6 +8,8 @@ using RoomBooking.Infrastructure;
 using RoomBooking.Infrastructure.Authentication;
 using RoomBooking.Infrastructure.Persistence;
 using RoomBooking.Application.Auth;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using RoomBooking.Api.Health;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -56,6 +58,8 @@ builder.Services
 builder.Services.AddAuthorization();
 
 builder.Services.AddControllers();
+builder.Services.AddHealthChecks()
+    .AddCheck<DatabaseHealthCheck>("database", tags: new[] { "ready" });
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
@@ -107,6 +111,18 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Liveness: the process is up. No dependency is checked.
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = _ => false
+}).AllowAnonymous();
+
+// Readiness: the application can serve traffic, which needs a working database.
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready")
+}).AllowAnonymous();
 
 app.Run();
 
