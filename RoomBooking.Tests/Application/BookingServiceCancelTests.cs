@@ -6,6 +6,7 @@ using RoomBooking.Domain.Entities;
 using RoomBooking.Domain.Enums;
 using RoomBooking.Tests.Helpers;
 using Xunit;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace RoomBooking.Tests.Application;
 
@@ -20,7 +21,7 @@ public class BookingServiceCancelTests
     private readonly TestClock _clock = new(new DateTimeOffset(2027, 1, 1, 8, 0, 0, TimeSpan.Zero));
 
     private BookingService CreateService() =>
-        new(_bookings.Object, _rooms.Object, _clock);
+        new(_bookings.Object, _rooms.Object, _clock, NullLogger<BookingService>.Instance);
 
     // A booking owned by OwnerId. The repository returns it for BookingId.
     private Booking SetupBooking(BookingStatus status = BookingStatus.Active)

@@ -1,8 +1,9 @@
+using Microsoft.Extensions.Logging;
+using RoomBooking.Application.Common;
 using RoomBooking.Application.Exceptions;
 using RoomBooking.Application.Rooms;
 using RoomBooking.Domain.Entities;
 using RoomBooking.Domain.Enums;
-using RoomBooking.Application.Common;
 
 namespace RoomBooking.Application.Bookings;
 
@@ -13,15 +14,18 @@ public class BookingService : IBookingService
     private readonly IBookingRepository _bookings;
     private readonly IRoomRepository _rooms;
     private readonly TimeProvider _clock;
+    private readonly ILogger<BookingService> _logger;
 
     public BookingService(
         IBookingRepository bookings,
         IRoomRepository rooms,
-        TimeProvider clock)
+        TimeProvider clock,
+        ILogger<BookingService> logger)
     {
         _bookings = bookings;
         _rooms = rooms;
         _clock = clock;
+        _logger = logger;
     }
 
     public async Task<BookingResponse> CreateAsync(
@@ -61,6 +65,10 @@ public class BookingService : IBookingService
         if (!await _bookings.TryAddIfAvailableAsync(booking, ct))
             throw new ConflictException("The room is already booked for part of this time range.");
 
+        _logger.LogInformation(
+            "Booking {BookingId} created in room {RoomId} by user {UserId} from {StartUtc:O} to {EndUtc:O}",
+            booking.Id, room.Id, userId, startUtc, endUtc);
+
         return ToResponse(booking);
     }
 
@@ -71,7 +79,7 @@ public class BookingService : IBookingService
     }
 
     public async Task<PagedResult<BookingResponse>> SearchAsync(
-    BookingSearchRequest request, CancellationToken ct)
+        BookingSearchRequest request, CancellationToken ct)
     {
         var fromUtc = request.From?.UtcDateTime;
         var toUtc = request.To?.UtcDateTime;
@@ -94,13 +102,23 @@ public class BookingService : IBookingService
         var booking = await GetBookingOrThrowAsync(id, ct);
 
         if (!isAdmin && booking.UserId != requesterId)
+        {
+            _logger.LogWarning(
+                "User {UserId} tried to cancel booking {BookingId} owned by user {OwnerId}",
+                requesterId, id, booking.UserId);
+
             throw new ForbiddenException("You can only cancel your own bookings.");
+        }
 
         // Cancelling twice is harmless, so treat it as already done.
         if (booking.Status == BookingStatus.Cancelled) return;
 
         booking.Cancel();   // the rule "cancel = change Status" lives in the domain entity
         await _bookings.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "Booking {BookingId} cancelled by user {UserId} (admin: {IsAdmin})",
+            id, requesterId, isAdmin);
     }
 
     private async Task<Booking> GetBookingOrThrowAsync(int id, CancellationToken ct)

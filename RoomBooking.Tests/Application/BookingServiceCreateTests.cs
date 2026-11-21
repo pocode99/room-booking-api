@@ -6,6 +6,7 @@ using RoomBooking.Domain.Entities;
 using RoomBooking.Domain.Enums;
 using RoomBooking.Tests.Helpers;
 using Xunit;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace RoomBooking.Tests.Application;
 
@@ -27,7 +28,7 @@ public class BookingServiceCreateTests
         new(2027, 1, 1, hour, minute, 0, TimeSpan.Zero);
 
     private BookingService CreateService() =>
-        new(_bookings.Object, _rooms.Object, _clock);
+        new(_bookings.Object, _rooms.Object, _clock, NullLogger<BookingService>.Instance);
 
     private static CreateBookingRequest Request(
         DateTimeOffset start, DateTimeOffset end, string title = "Team sync") =>
