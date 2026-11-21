@@ -1,0 +1,14 @@
+**/bin/
+**/obj/
+.git/
+.github/
+.vs/
+.vscode/
+RoomBooking.Tests/
+scripts/
+
+# Local database files and secrets must never end up in an image.
+*.db
+*.db-shm
+*.db-wal
+**/.env

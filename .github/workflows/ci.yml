@@ -30,3 +30,33 @@ jobs:
 
       - name: Test
         run: dotnet test --no-build --configuration Release --verbosity normal
+  docker-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v7
+
+      - name: Build the Docker image
+        run: docker build --tag room-booking-api:ci .
+
+      - name: Smoke test the container
+        run: |
+          # The signing key below is a throwaway value used only inside this CI run.
+          docker run --detach --name api --publish 8080:8080 \
+            --env Jwt__Key=ci-only-signing-key-with-more-than-32-bytes \
+            room-booking-api:ci
+
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent http://localhost:8080/health/ready; then
+              echo
+              echo "The container is ready."
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "The container did not become ready in time. Container logs:"
+          docker logs api
+          exit 1
+  
