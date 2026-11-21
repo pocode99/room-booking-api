@@ -56,6 +56,36 @@ public class BookingRepository : IBookingRepository
         }
     }
 
+    public async Task<(List<Booking> Items, int TotalCount)> SearchAsync(
+        int? roomId, DateTime? fromUtc, DateTime? toUtc, int page, int pageSize, CancellationToken ct)
+    {
+        var query = _db.Bookings
+            .AsNoTracking()   // read-only query, no change tracking needed
+            .Where(b => b.Status == BookingStatus.Active);
+
+        if (roomId.HasValue)
+            query = query.Where(b => b.RoomId == roomId.Value);
+
+        // A booking is in range when it overlaps [from, to), the same rule as the overlap check.
+        if (fromUtc.HasValue)
+            query = query.Where(b => b.EndUtc > fromUtc.Value);
+
+        if (toUtc.HasValue)
+            query = query.Where(b => b.StartUtc < toUtc.Value);
+
+        var totalCount = await query.CountAsync(ct);
+
+        var items = await query
+            .Include(b => b.Room)   // the response needs the room name
+            .OrderBy(b => b.StartUtc)
+            .ThenBy(b => b.Id)      // tie-breaker keeps page boundaries stable
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        return (items, totalCount);
+    }
+
     public Task SaveChangesAsync(CancellationToken ct) => _db.SaveChangesAsync(ct);
 
     // Same rule as Booking.Overlaps, written as a query so the database evaluates it.

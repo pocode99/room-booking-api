@@ -2,6 +2,7 @@ using RoomBooking.Application.Exceptions;
 using RoomBooking.Application.Rooms;
 using RoomBooking.Domain.Entities;
 using RoomBooking.Domain.Enums;
+using RoomBooking.Application.Common;
 
 namespace RoomBooking.Application.Bookings;
 
@@ -67,6 +68,25 @@ public class BookingService : IBookingService
     {
         var booking = await GetBookingOrThrowAsync(id, ct);
         return ToResponse(booking);
+    }
+
+    public async Task<PagedResult<BookingResponse>> SearchAsync(
+    BookingSearchRequest request, CancellationToken ct)
+    {
+        var fromUtc = request.From?.UtcDateTime;
+        var toUtc = request.To?.UtcDateTime;
+
+        if (fromUtc.HasValue && toUtc.HasValue && fromUtc.Value >= toUtc.Value)
+            throw new BusinessRuleException("The 'from' time must be earlier than the 'to' time.");
+
+        var (items, totalCount) = await _bookings.SearchAsync(
+            request.RoomId, fromUtc, toUtc, request.Page, request.PageSize, ct);
+
+        return new PagedResult<BookingResponse>(
+            items.Select(ToResponse).ToList(),
+            request.Page,
+            request.PageSize,
+            totalCount);
     }
 
     public async Task CancelAsync(int id, int requesterId, bool isAdmin, CancellationToken ct)

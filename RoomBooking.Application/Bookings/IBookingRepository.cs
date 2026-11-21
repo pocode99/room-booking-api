@@ -13,5 +13,10 @@ public interface IBookingRepository
     // can never both succeed for the same time slot.
     Task<bool> TryAddIfAvailableAsync(Booking booking, CancellationToken ct);
 
+    // Read-only search over ACTIVE bookings, ordered by start time.
+    // Returns one page of results plus the total number of matches.
+    Task<(List<Booking> Items, int TotalCount)> SearchAsync(
+        int? roomId, DateTime? fromUtc, DateTime? toUtc, int page, int pageSize, CancellationToken ct);
+
     Task SaveChangesAsync(CancellationToken ct);
 }

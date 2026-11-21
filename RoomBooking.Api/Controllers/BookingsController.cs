@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using RoomBooking.Application.Bookings;
 using RoomBooking.Application.Exceptions;
 using RoomBooking.Domain.Enums;
+using RoomBooking.Application.Common;
 
 namespace RoomBooking.Api.Controllers;
 
@@ -28,6 +29,11 @@ public class BookingsController : ControllerBase
         // Returns 201 Created with a Location header pointing to GET api/bookings/{id}.
         return CreatedAtAction(nameof(GetById), new { id = booking.Id }, booking);
     }
+
+    [HttpGet]
+    public async Task<ActionResult<PagedResult<BookingResponse>>> Search(
+    [FromQuery] BookingSearchRequest request, CancellationToken ct)
+    => Ok(await _bookings.SearchAsync(request, ct));
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<BookingResponse>> GetById(int id, CancellationToken ct)
