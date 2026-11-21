@@ -1,4 +1,5 @@
 # Room Booking API
+![CI](https://github.com/pocode99/room-booking-api/actions/workflows/ci.yml/badge.svg)
 
 A REST API for booking meeting rooms inside a company.
 
