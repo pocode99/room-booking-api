@@ -1,0 +1,150 @@
+@baseUrl = http://localhost:5016
+
+### Log in as alice (expect 200)
+# @name aliceLogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "alice@example.com",
+  "password": "Passw0rd!123"
+}
+
+### Setup 1: room 3, 09:00-10:00 (expect 201)
+# @name b1
+POST {{baseUrl}}/api/bookings
+Content-Type: application/json
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+{ "roomId": 3, "title": "S1", "start": "2027-04-01T09:00:00Z", "end": "2027-04-01T10:00:00Z" }
+
+### Setup 2: room 3, 10:00-11:00 (expect 201)
+# @name b2
+POST {{baseUrl}}/api/bookings
+Content-Type: application/json
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+{ "roomId": 3, "title": "S2", "start": "2027-04-01T10:00:00Z", "end": "2027-04-01T11:00:00Z" }
+
+### Setup 3: room 3, 11:00-12:00 (expect 201)
+# @name b3
+POST {{baseUrl}}/api/bookings
+Content-Type: application/json
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+{ "roomId": 3, "title": "S3", "start": "2027-04-01T11:00:00Z", "end": "2027-04-01T12:00:00Z" }
+
+### Setup 4: room 3, 13:00-14:00 (expect 201)
+# @name b4
+POST {{baseUrl}}/api/bookings
+Content-Type: application/json
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+{ "roomId": 3, "title": "S4", "start": "2027-04-01T13:00:00Z", "end": "2027-04-01T14:00:00Z" }
+
+### Setup 5: room 3, 14:00-15:00 (expect 201)
+# @name b5
+POST {{baseUrl}}/api/bookings
+Content-Type: application/json
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+{ "roomId": 3, "title": "S5", "start": "2027-04-01T14:00:00Z", "end": "2027-04-01T15:00:00Z" }
+
+### Setup 6: room 4, 09:00-10:00 (expect 201)
+# @name b6
+POST {{baseUrl}}/api/bookings
+Content-Type: application/json
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+{ "roomId": 4, "title": "S6", "start": "2027-04-01T09:00:00Z", "end": "2027-04-01T10:00:00Z" }
+
+### 1. Search without a token (expect 401)
+GET {{baseUrl}}/api/bookings?roomId=3
+
+### 2. Room 3, the whole day (expect 200, totalCount 5, items S1..S5 in this order)
+GET {{baseUrl}}/api/bookings?roomId=3&from=2027-04-01T00:00:00Z&to=2027-04-02T00:00:00Z
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+### 3. Page 1, size 2 (expect 2 items S1, S2; totalCount 5; totalPages 3)
+GET {{baseUrl}}/api/bookings?roomId=3&from=2027-04-01T00:00:00Z&to=2027-04-02T00:00:00Z&page=1&pageSize=2
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+### 4. Page 2, size 2 (expect 2 items S3, S4)
+GET {{baseUrl}}/api/bookings?roomId=3&from=2027-04-01T00:00:00Z&to=2027-04-02T00:00:00Z&page=2&pageSize=2
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+### 5. Page 3, size 2 (expect 1 item S5)
+GET {{baseUrl}}/api/bookings?roomId=3&from=2027-04-01T00:00:00Z&to=2027-04-02T00:00:00Z&page=3&pageSize=2
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+### 6. Page 4, size 2 (expect 200, empty items, totalCount still 5)
+GET {{baseUrl}}/api/bookings?roomId=3&from=2027-04-01T00:00:00Z&to=2027-04-02T00:00:00Z&page=4&pageSize=2
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+### 7. Window 10:30-13:30 (expect 3 items S2, S3, S4; a booking that overlaps the window counts)
+GET {{baseUrl}}/api/bookings?roomId=3&from=2027-04-01T10:30:00Z&to=2027-04-01T13:30:00Z
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+### 8. Window 10:00-11:00 (expect 1 item S2; S1 ends at 10:00 and S3 starts at 11:00, touching is not overlapping)
+GET {{baseUrl}}/api/bookings?roomId=3&from=2027-04-01T10:00:00Z&to=2027-04-01T11:00:00Z
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+### 9. Room 4, the whole day (expect totalCount 1, item S6)
+GET {{baseUrl}}/api/bookings?roomId=4&from=2027-04-01T00:00:00Z&to=2027-04-02T00:00:00Z
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+### 10. Room that does not exist (expect 200, empty items, totalCount 0)
+GET {{baseUrl}}/api/bookings?roomId=999
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+### 11. Cancel S3 (expect 204)
+DELETE {{baseUrl}}/api/bookings/{{b3.response.body.id}}
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+### 12. Room 3, the whole day again (expect totalCount 4, S3 is gone because cancelled bookings are not listed)
+GET {{baseUrl}}/api/bookings?roomId=3&from=2027-04-01T00:00:00Z&to=2027-04-02T00:00:00Z
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+### 13. "from" is later than "to" (expect 400)
+GET {{baseUrl}}/api/bookings?from=2027-04-02T00:00:00Z&to=2027-04-01T00:00:00Z
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+### 14. "from" equals "to" (expect 400)
+GET {{baseUrl}}/api/bookings?from=2027-04-01T00:00:00Z&to=2027-04-01T00:00:00Z
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+### 15. Page size above the limit (expect 400)
+GET {{baseUrl}}/api/bookings?pageSize=101
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+### 16. Page size zero (expect 400)
+GET {{baseUrl}}/api/bookings?pageSize=0
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+### 17. Page zero (expect 400)
+GET {{baseUrl}}/api/bookings?page=0
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+### 18. Malformed date (expect 400)
+GET {{baseUrl}}/api/bookings?from=not-a-date
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+### Cleanup: cancel S1 (expect 204)
+DELETE {{baseUrl}}/api/bookings/{{b1.response.body.id}}
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+### Cleanup: cancel S2 (expect 204)
+DELETE {{baseUrl}}/api/bookings/{{b2.response.body.id}}
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+### Cleanup: cancel S4 (expect 204)
+DELETE {{baseUrl}}/api/bookings/{{b4.response.body.id}}
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+### Cleanup: cancel S5 (expect 204)
+DELETE {{baseUrl}}/api/bookings/{{b5.response.body.id}}
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
+
+### Cleanup: cancel S6 (expect 204)
+DELETE {{baseUrl}}/api/bookings/{{b6.response.body.id}}
+Authorization: Bearer {{aliceLogin.response.body.accessToken}}
