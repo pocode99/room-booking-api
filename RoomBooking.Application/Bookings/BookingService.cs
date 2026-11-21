@@ -43,9 +43,6 @@ public class BookingService : IBookingService
         var room = await _rooms.GetByIdAsync(request.RoomId, ct)
             ?? throw new NotFoundException($"Room {request.RoomId} was not found.");
 
-        if (await _bookings.HasOverlapAsync(room.Id, startUtc, endUtc, ct))
-            throw new ConflictException("The room is already booked for part of this time range.");
-
         var booking = new Booking
         {
             RoomId = room.Id,
@@ -58,8 +55,10 @@ public class BookingService : IBookingService
             CreatedAtUtc = nowUtc
         };
 
-        await _bookings.AddAsync(booking, ct);
-        await _bookings.SaveChangesAsync(ct);
+        // The overlap check and the insert happen atomically inside the repository,
+        // so two concurrent requests cannot both book the same slot.
+        if (!await _bookings.TryAddIfAvailableAsync(booking, ct))
+            throw new ConflictException("The room is already booked for part of this time range.");
 
         return ToResponse(booking);
     }
